@@ -13,62 +13,66 @@
 <button class="btn btn-primary" @onclick="@Prompt">Prompt</button>
 <button class="btn btn-primary" @onclick="@ScriptPrompt">Script Prompt</button>
 <button class="btn btn-primary" @onclick="@ScriptAlert">Script Alert</button><hr>
-<button class="btn btn-primary" @onclick="@ModulelPrompt">Module Prompt</button>
-<button class="btn btn-primary" @onclick="@ModulelAlert">Module Alert</button><br /><br />
+<button class="btn btn-primary" @onclick="@ModulePrompt">Module Prompt</button>
+<button class="btn btn-primary" @onclick="@ModuleAlert">Module Alert</button><br /><br />
 <h4 style="background-color:aliceblue; padding:20px">TypeScript Interop</h4><hr>
 <button class="btn btn-primary" @onclick="@HelloAlert">Hello Alert</button>
 <button class="btn btn-primary" @onclick="@BundleIndexHello">Bundle Index Hello</button>
 <button class="btn btn-primary" @onclick="@ReExportHello">ReExport Hello</button><br /><br />
 <h4 style="background-color:aliceblue; padding:20px">TypeScript NPM Interop</h4><hr>
-<img src="./images/tsinterop.png" style="z-index: 2;"/>
-<canvas id="cube" width="363" height="363" style="z-index: 1; position: absolute; opacity: 1;  margin-Left: -23em;" />
+<img src="./images/tsinterop.png" style="z-index: 2;" alt=""/>
+<canvas id="cube" width="363" height="363" style="z-index: 1; position: absolute; opacity: 1;  margin-Left: -23em;"></canvas>
 
 @code {
-    private IJSObjectReference module;
-    private IJSObjectReference hello;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _hello;
     string Message { get; set; } = "";
 
-    string Version { get { return "?v=" + DateTime.Now.Ticks.ToString(); } }
+    static string Version => $"?v={DateTime.Now.Ticks}";
 
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
-        if (module is not null) { await module.DisposeAsync(); }
-        if (hello is not null) { await module.DisposeAsync(); }
+        if (_module is not null) { await _module.DisposeAsync(); }
+        if (_hello is not null) { await _hello.DisposeAsync(); }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            module = await JS.InvokeAsync<IJSObjectReference>("import", "./src/script.module.js" + Version);
-            hello = await JS.InvokeAsync<IJSObjectReference>("import", "./src/hello.js" + Version);
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", "./src/script.module.js" + Version);
+            _hello = await JS.InvokeAsync<IJSObjectReference>("import", "./src/hello.js" + Version);
             await JS.InvokeVoidAsync("cube.Cube.Create");
         }
     }
 
-    async void ModulelAlert()
+    async void ModuleAlert()
     {
-        await module.InvokeVoidAsync("ModulAlert", "Modulel Alert");
+        if (_module != null)
+            await _module.InvokeVoidAsync("ModulAlert", "Modulel Alert");
     }
 
-    async void ModulelPrompt()
+    async void ModulePrompt()
     {
-        string answer = await module.InvokeAsync<string>("ModulePrompt", "Module Prompt say what?");
-        Message = "Module Prompt said: " + (String.IsNullOrEmpty(answer) ? "nothing" : answer);
+        if (_module == null)
+            return;
+        
+        string answer = await _module.InvokeAsync<string>("ModulePrompt", "Module Prompt say what?");
+        Message = "Module Prompt said: " + (string.IsNullOrEmpty(answer) ? "nothing" : answer);
         StateHasChanged();
     }
 
     async void Prompt()
     {
         string answer = await JS.InvokeAsync<string>("prompt", "say what?");
-        Message = "Prompt said: " + (String.IsNullOrEmpty(answer) ? "nothing" : answer);
+        Message = "Prompt said: " + (string.IsNullOrEmpty(answer) ? "nothing" : answer);
         StateHasChanged();
     }
 
     async void ScriptPrompt()
     {
         string answer = await JS.InvokeAsync<string>("ScriptPrompt", "ScriptPrompt say what?");
-        Message = "Script Prompt said: " + (String.IsNullOrEmpty(answer) ? "nothing" : answer);
+        Message = "Script Prompt said: " + (string.IsNullOrEmpty(answer) ? "nothing" : answer);
         StateHasChanged();
     }
 
@@ -79,8 +83,11 @@
 
     async void HelloAlert()
     {
-        await hello.InvokeVoidAsync("HelloInstance.hello");
-        await hello.InvokeVoidAsync("Hello.goodbye");
+        if (_hello == null)
+            return;
+        
+        await _hello.InvokeVoidAsync("HelloInstance.hello");
+        await _hello.InvokeVoidAsync("Hello.goodbye");
     }
 
     async void BundleIndexHello()
